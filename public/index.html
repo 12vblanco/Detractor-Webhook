@@ -90,7 +90,6 @@
 
   <script>
     const { createClient } = supabase;
-    const db = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
     let allData = [];
 
     function escapeHtml(str) {
@@ -167,8 +166,11 @@
       document.getElementById('detractorTable').style.display = 'none';
       document.getElementById('emptyState').style.display = 'none';
 
-      // Mock mode: load local fixture data instead of hitting Supabase (e.g. ?mock=true)
-      if (new URLSearchParams(window.location.search).get('mock') === 'true') {
+      // Mock mode: active when ?mock=true or when no real credentials are configured
+      const isMock = new URLSearchParams(window.location.search).get('mock') === 'true'
+        || CONFIG.SUPABASE_URL === 'your-supabase-url';
+
+      if (isMock) {
         const res = await fetch('/data/detractors.json');
         const data = await res.json();
         document.getElementById('loadingState').style.display = 'none';
@@ -177,6 +179,8 @@
         renderTable(allData);
         return;
       }
+
+      const db = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
       try {
         const result = await Promise.race([
