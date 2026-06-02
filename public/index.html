@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detractor Dashboard</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700,800,900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <div class="header-inner">
+        <div class="header-left">
+          <div class="eyebrow">Feedback data</div>
+          <h1>Detractor<span>.</span><br>Dashboard</h1>
+          <div class="header-meta" id="lastUpdated">Loading data...</div>
+        </div>
+        <div class="header-right">
+          <div class="live-badge">
+            <div class="live-dot"></div>LIVE TRACKING
+          </div>
+          <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="stats">
+      <div class="stat-card red">
+        <div class="stat-label">Total Detractors</div>
+        <div class="stat-value" id="statTotal">—</div>
+        <div class="stat-sub">score 0–6</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Critical (0–3)</div>
+        <div class="stat-value" id="statCritical">—</div>
+        <div class="stat-sub">immediate attention</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">At Risk (4–6)</div>
+        <div class="stat-value" id="statAtRisk">—</div>
+        <div class="stat-sub">needs follow-up</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Avg Score</div>
+        <div class="stat-value" id="statAvg">—</div>
+        <div class="stat-sub">detractor avg</div>
+      </div>
+    </div>
+
+    <div class="score-bar" id="scoreBar"></div>
+
+    <div class="toolbar">
+      <div class="section-title" id="tableCount">All detractors</div>
+      <div class="filters">
+        <button class="filter-btn active" onclick="filterData('all', this)">All</button>
+        <button class="filter-btn" onclick="filterData('critical', this)">Critical 0–3</button>
+        <button class="filter-btn" onclick="filterData('atrisk', this)">At Risk 4–6</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="loading" id="loadingState">Loading detractors</div>
+      <table id="detractorTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Account</th>
+            <th>Score</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none">No detractors found</div>
+    </div>
+
+    <footer>
+      <div class="footer-text">Victor Blanco</div>
+      <div class="footer-text" id="footerCount"></div>
+    </footer>
+  </div>
+
+  <script>
+    const { createClient } = supabase;
+    const db = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+    let allData = [];
+
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function formatDate(iso) {
+      return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('tableBody');
+      const table = document.getElementById('detractorTable');
+      const empty = document.getElementById('emptyState');
+      tbody.innerHTML = '';
+      if (data.length === 0) {
+        table.style.display = 'none'; empty.style.display = 'block';
+        document.getElementById('tableCount').textContent = 'No results'; return;
+      }
+      table.style.display = 'table'; empty.style.display = 'none';
+      document.getElementById('tableCount').textContent = `${data.length} detractor${data.length !== 1 ? 's' : ''}`;
+      document.getElementById('footerCount').textContent = `${data.length} records`;
+      data.forEach((d, i) => {
+        const tr = document.createElement('tr');
+        tr.style.animationDelay = `${i * 0.05}s`;
+        tr.innerHTML = `
+        <td class="td-name">${escapeHtml(d.name) || '—'}</td>
+        <td class="td-email">${escapeHtml(d.email) || '—'}</td>
+        <td class="td-account">${escapeHtml(d.account_id) || '—'}</td>
+        <td><span class="score-badge score-${parseInt(d.score, 10)}">${parseInt(d.score, 10)}</span></td>
+        <td class="td-date">${formatDate(d.timestamp)}</td>
+        <td><a href="mailto:${escapeHtml(d.email)}" class="action-btn">Contact →</a></td>
+      `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderStats(data) {
+      const total = data.length;
+      const critical = data.filter(d => d.score <= 3).length;
+      const atRisk = data.filter(d => d.score >= 4).length;
+      const avg = total > 0 ? (data.reduce((s, d) => s + d.score, 0) / total).toFixed(1) : '—';
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statCritical').textContent = critical;
+      document.getElementById('statAtRisk').textContent = atRisk;
+      document.getElementById('statAvg').textContent = avg;
+      const bar = document.getElementById('scoreBar');
+      bar.innerHTML = '';
+      for (let i = 0; i <= 10; i++) {
+        const seg = document.createElement('div');
+        seg.className = 'score-segment';
+        const count = data.filter(d => d.score === i).length;
+        if (count > 0) seg.className += i <= 3 ? ' filled-red' : ' filled-amber';
+        seg.title = `Score ${i}: ${count}`;
+        bar.appendChild(seg);
+      }
+      if (data.length > 0) {
+        const latest = [...data].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+        document.getElementById('lastUpdated').textContent = `Last response: ${formatDate(latest.timestamp)}`;
+      }
+    }
+
+    function filterData(type, btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      let filtered = allData;
+      if (type === 'critical') filtered = allData.filter(d => d.score <= 3);
+      if (type === 'atrisk') filtered = allData.filter(d => d.score >= 4 && d.score <= 6);
+      renderTable(filtered);
+    }
+
+    async function loadData() {
+      document.getElementById('loadingState').style.display = 'block';
+      document.getElementById('detractorTable').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'none';
+
+      // Mock mode: load local fixture data instead of hitting Supabase (e.g. ?mock=true)
+      if (new URLSearchParams(window.location.search).get('mock') === 'true') {
+        const res = await fetch('/data/detractors.json');
+        const data = await res.json();
+        document.getElementById('loadingState').style.display = 'none';
+        allData = data;
+        renderStats(allData);
+        renderTable(allData);
+        return;
+      }
+
+      try {
+        const result = await Promise.race([
+          db.from('detractors').select('*').order('timestamp', { ascending: false }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 5s')), 5000))
+        ]);
+
+        // console.log('Result:', result);
+
+        const { data, error } = result;
+        document.getElementById('loadingState').style.display = 'none';
+
+        if (error) {
+          console.error('Supabase error:', error);
+          document.getElementById('loadingState').textContent = 'Error: ' + error.message;
+          document.getElementById('loadingState').style.display = 'block';
+          return;
+        }
+
+        allData = data;
+        renderStats(allData);
+        renderTable(allData);
+
+      } catch (err) {
+        console.error('Caught error:', err.message);
+        document.getElementById('loadingState').textContent = 'Error: ' + err.message;
+        document.getElementById('loadingState').style.display = 'block';
+      }
+    }
+    loadData();
+  </script>
+</body>
+
+</html>

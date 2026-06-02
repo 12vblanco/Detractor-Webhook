@@ -1,0 +1,26 @@
+[
+  {
+    "visitorId": "visitor-001",
+    "accountId": "acme-corp",
+    "email": "john@acme.com",
+    "name": "John Smith",
+    "score": 3,
+    "timestamp": "2026-05-13T10:00:00.000Z"
+  },
+  {
+    "visitorId": "visitor-002",
+    "accountId": "globex-inc",
+    "email": "sara@globex.com",
+    "name": "Sara Jones",
+    "score": 5,
+    "timestamp": "2026-05-12T14:30:00.000Z"
+  },
+  {
+    "visitorId": "visitor-003",
+    "accountId": "initech",
+    "email": "mike@initech.com",
+    "name": "Mike Brown",
+    "score": 1,
+    "timestamp": "2026-05-11T09:15:00.000Z"
+  }
+]
