@@ -20,12 +20,7 @@ exports.handler = async (event) => {
           response: { mimeType: 'application/json' },
           request: {
             pipeline: [
-              {
-                source: {
-                  visitors: null,
-                  timeSeries: { period: 'dayRange', first: 'now() - (30 * 24 * 60 * 60000)', count: 1 }
-                }
-              },
+              { source: { visitors: null } },
               { limit: 50 }
             ]
           }
