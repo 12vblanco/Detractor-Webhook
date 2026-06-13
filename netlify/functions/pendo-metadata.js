@@ -30,7 +30,7 @@ exports.handler = async () => {
       const list = Array.isArray(data) ? data : (data?.guides || data?.features || data?.segments || []);
 
       for (const entry of list) {
-        items.push({ type, name: entry.name, id: entry.id });
+        items.push({ type, name: entry.name, id: entry.id, createdAt: entry.createdAt });
       }
     }
 

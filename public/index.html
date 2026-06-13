@@ -113,6 +113,7 @@
             <th>Type</th>
             <th>Name</th>
             <th>ID</th>
+            <th>Created</th>
           </tr>
         </thead>
         <tbody id="metaBody"></tbody>
@@ -254,6 +255,7 @@
             <td class="td-account">${escapeHtml(item.type)}</td>
             <td class="td-name">${escapeHtml(item.name) || '—'}</td>
             <td class="td-email">${escapeHtml(item.id)}</td>
+            <td class="td-date">${item.createdAt ? formatDate(item.createdAt) : '—'}</td>
           `;
           body.appendChild(tr);
         });
