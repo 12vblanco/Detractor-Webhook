@@ -33,7 +33,9 @@ exports.handler = async (event) => {
       });
 
       if (!aggRes.ok) {
-        return { statusCode: aggRes.status, body: JSON.stringify({ error: `Pendo aggregation returned ${aggRes.status}` }) };
+        const detail = await aggRes.text();
+        console.error('Pendo aggregation error:', aggRes.status, detail);
+        return { statusCode: 200, body: JSON.stringify({ error: `Pendo aggregation returned ${aggRes.status}: ${detail}` }) };
       }
 
       const aggData = await aggRes.json();
@@ -49,13 +51,15 @@ exports.handler = async (event) => {
     const res = await fetch(`https://app.pendo.io/api/v1/visitor/${encodeURIComponent(visitorId)}`, { headers });
 
     if (!res.ok) {
-      return { statusCode: res.status, body: JSON.stringify({ error: `Pendo API returned ${res.status}` }) };
+      const detail = await res.text();
+      console.error('Pendo visitor error:', res.status, detail);
+      return { statusCode: 200, body: JSON.stringify({ error: `Pendo API returned ${res.status}: ${detail}` }) };
     }
 
     const data = await res.json();
     return { statusCode: 200, body: JSON.stringify(data) };
 
   } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 200, body: JSON.stringify({ error: error.message }) };
   }
 };
