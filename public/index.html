@@ -82,6 +82,25 @@
       <div class="empty-state" id="emptyState" style="display:none">No detractors found</div>
     </div>
 
+    <div class="toolbar" style="margin-top:48px">
+      <div class="section-title">API field reference</div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="loading" id="apiLoadingState">Loading API data</div>
+      <table id="apiFieldTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Description</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody id="apiFieldBody"></tbody>
+      </table>
+      <div class="empty-state" id="apiEmptyState" style="display:none">No API data available</div>
+    </div>
+
     <footer>
       <div class="footer-text">Victor Blanco</div>
       <div class="footer-text" id="footerCount"></div>
@@ -91,6 +110,90 @@
   <script>
     const { createClient } = supabase;
     let allData = [];
+
+    const FIELD_DESCRIPTIONS = {
+      visitorId: 'Unique visitor ID',
+      accountId: 'Account identifier',
+      lastUpdated: 'Profile last updated',
+      firstVisit: 'First recorded visit',
+      lastVisit: 'Most recent visit',
+      'metadata.auto.email': 'Visitor email address',
+      'metadata.auto.full_name': 'Visitor full name',
+      'metadata.auto.firstvisit_ts': 'First visit timestamp',
+      'metadata.auto.lastvisit_ts': 'Last visit timestamp',
+      'metadata.auto.lastbrowsername': 'Last browser used',
+      'metadata.auto.lastos': 'Last operating system',
+      'metadata.agent.email': 'Agent email address',
+      'metadata.agent.full_name': 'Agent full name'
+    };
+
+    function describeField(key) {
+      if (FIELD_DESCRIPTIONS[key]) return FIELD_DESCRIPTIONS[key];
+      const last = key.split('.').pop();
+      return last.replace(/_/g, ' ');
+    }
+
+    function flatten(obj, prefix = '', out = {}) {
+      for (const [key, value] of Object.entries(obj || {})) {
+        const path = prefix ? `${prefix}.${key}` : key;
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          flatten(value, path, out);
+        } else {
+          out[path] = value;
+        }
+      }
+      return out;
+    }
+
+    async function loadApiReference() {
+      const table = document.getElementById('apiFieldTable');
+      const body = document.getElementById('apiFieldBody');
+      const loading = document.getElementById('apiLoadingState');
+      const empty = document.getElementById('apiEmptyState');
+
+      try {
+        const res = await fetch('/.netlify/functions/pendo-visitor');
+        const data = await res.json();
+        loading.style.display = 'none';
+
+        if (data.configured === false) {
+          empty.textContent = 'Connect PENDO_KEY and PENDO_DEMO_VISITOR_ID in Netlify to show live visitor data here';
+          empty.style.display = 'block';
+          return;
+        }
+
+        if (data.error) {
+          empty.textContent = 'Error: ' + data.error;
+          empty.style.display = 'block';
+          return;
+        }
+
+        const fields = Object.entries(flatten(data));
+        if (fields.length === 0) {
+          empty.textContent = 'No API data available';
+          empty.style.display = 'block';
+          return;
+        }
+
+        body.innerHTML = '';
+        fields.forEach(([key, value], i) => {
+          const tr = document.createElement('tr');
+          tr.style.animationDelay = `${i * 0.03}s`;
+          tr.innerHTML = `
+            <td class="td-name">${escapeHtml(key)}</td>
+            <td class="td-email">${escapeHtml(describeField(key))}</td>
+            <td class="td-account">${escapeHtml(value)}</td>
+          `;
+          body.appendChild(tr);
+        });
+        table.style.display = 'table';
+
+      } catch (err) {
+        loading.style.display = 'none';
+        empty.textContent = 'Error: ' + err.message;
+        empty.style.display = 'block';
+      }
+    }
 
     function escapeHtml(str) {
       return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -211,6 +314,7 @@
       }
     }
     loadData();
+    loadApiReference();
   </script>
 </body>
 
