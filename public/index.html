@@ -101,6 +101,25 @@
       <div class="empty-state" id="apiEmptyState" style="display:none">No API data available</div>
     </div>
 
+    <div class="toolbar" style="margin-top:48px">
+      <div class="section-title" id="metaCount">Guides, features &amp; segments</div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="loading" id="metaLoadingState">Loading account data</div>
+      <table id="metaTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Name</th>
+            <th>ID</th>
+          </tr>
+        </thead>
+        <tbody id="metaBody"></tbody>
+      </table>
+      <div class="empty-state" id="metaEmptyState" style="display:none">No account data available</div>
+    </div>
+
     <footer>
       <div class="footer-text">Victor Blanco</div>
       <div class="footer-text" id="footerCount"></div>
@@ -183,6 +202,58 @@
             <td class="td-name">${escapeHtml(key)}</td>
             <td class="td-email">${escapeHtml(describeField(key))}</td>
             <td class="td-account">${escapeHtml(value)}</td>
+          `;
+          body.appendChild(tr);
+        });
+        table.style.display = 'table';
+
+      } catch (err) {
+        loading.style.display = 'none';
+        empty.textContent = 'Error: ' + err.message;
+        empty.style.display = 'block';
+      }
+    }
+
+    async function loadAccountMeta() {
+      const table = document.getElementById('metaTable');
+      const body = document.getElementById('metaBody');
+      const loading = document.getElementById('metaLoadingState');
+      const empty = document.getElementById('metaEmptyState');
+
+      try {
+        const res = await fetch('/.netlify/functions/pendo-metadata');
+        const data = await res.json();
+        loading.style.display = 'none';
+
+        if (data.configured === false) {
+          empty.textContent = 'Connect PENDO_KEY in Netlify to show account data here';
+          empty.style.display = 'block';
+          return;
+        }
+
+        if (data.error) {
+          empty.textContent = 'Error: ' + data.error;
+          empty.style.display = 'block';
+          return;
+        }
+
+        const items = data.items || [];
+        if (items.length === 0) {
+          empty.textContent = 'No guides, features, or segments found';
+          empty.style.display = 'block';
+          return;
+        }
+
+        document.getElementById('metaCount').textContent = `Guides, features & segments (${items.length})`;
+
+        body.innerHTML = '';
+        items.forEach((item, i) => {
+          const tr = document.createElement('tr');
+          tr.style.animationDelay = `${Math.min(i * 0.02, 1)}s`;
+          tr.innerHTML = `
+            <td class="td-account">${escapeHtml(item.type)}</td>
+            <td class="td-name">${escapeHtml(item.name) || '—'}</td>
+            <td class="td-email">${escapeHtml(item.id)}</td>
           `;
           body.appendChild(tr);
         });
@@ -315,6 +386,7 @@
     }
     loadData();
     loadApiReference();
+    loadAccountMeta();
   </script>
 </body>
 
